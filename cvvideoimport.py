@@ -86,7 +86,6 @@ class Camera:
             output_text = "Error during OCR:\n" + e.stdout + "\n" + e.stderr
 
         # Display output in the text box
-        self.mainui.ocrOutputBox.setPlainText(output_text)  # QPlainTextEdit
         print(output_text)
 
     def closeEvent(self):
