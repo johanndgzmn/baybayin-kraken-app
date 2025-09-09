@@ -64,7 +64,7 @@
   <widget class="QPushButton" name="startStopCameraButton">
    <property name="geometry">
     <rect>
-     <x>120</x>
+     <x>30</x>
      <y>410</y>
      <width>181</width>
      <height>31</height>
@@ -141,6 +141,32 @@
    </property>
    <property name="text">
     <string>Binarize Image</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="resetCameraButton">
+   <property name="geometry">
+    <rect>
+     <x>280</x>
+     <y>410</y>
+     <width>181</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Reset Camera</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="showOutputTextButton">
+   <property name="geometry">
+    <rect>
+     <x>520</x>
+     <y>410</y>
+     <width>181</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Show Output Text</string>
    </property>
   </widget>
  </widget>

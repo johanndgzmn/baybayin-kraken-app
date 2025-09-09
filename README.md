@@ -8,7 +8,7 @@ kraken-env\Scripts\activate
 ```
 4. Install dependencies
 ```
-pip install kraken==5.2.1
+pip install kraken==5.3.0
 pip install opencv-python
 pip install numpy==1.26.4 scipy==1.11.4
 pip install pyqt6

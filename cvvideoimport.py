@@ -14,31 +14,36 @@ class Camera:
         self.mainui = loadUi('baybayin-kraken-app.ui')
         self.mainui.show()
         
-        self.mainui.startStopCameraButton.clicked.connect(self.closeEvent)
-        self.mainui.captureImageButton.clicked.connect(self.capture_image)
-        self.mainui.transliterateImageButton.clicked.connect(self.transliterate_image)  # Connect transliterate button
-        self.mainui.binarizeImageButton.clicked.connect(self.binarize_image)
-        
+        self.mainui.startStopCameraButton.clicked.connect(self.closeEvent)# exit button
+        self.mainui.captureImageButton.clicked.connect(self.capture_image) #capture frame button
+        self.mainui.transliterateImageButton.clicked.connect(self.transliterate_image) # transliterate button
+        self.mainui.binarizeImageButton.clicked.connect(self.binarize_image) #binarize button
+
+        self.mainui.resetCameraButton.clicked.connect(self.reset_camera) # reset button
+        self.mainui.showOutputTextButton.clicked.connect(self.show_output_text) # show output button
+
         self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         if not self.cap.isOpened():
             print("Error: Cannot access the webcam.")
             return
-        
+
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +
-                                                  "haarcascade_frontalface_default.xml")
-        
+                                                "haarcascade_frontalface_default.xml")
+
         self.video_label = self.mainui.cameraLabel
         self.video_label.setScaledContents(True)
         self.video_label.setFixedSize(429, 329)
         self.mainui.cameraLayout.addWidget(self.video_label)
-        
+
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(30)
-        
+
         self.current_frame = None
+        self.frozen = False   # ✅ Track freeze state
+
 
     def update_frame(self):
         ret, frame = self.cap.read()
@@ -60,33 +65,77 @@ class Camera:
 
     def capture_image(self):
         if self.current_frame is not None:
-            filename = "test_image.png"  # Fixed name for OCR input
+            filename = "test_image.png"
             cv2.imwrite(filename, self.current_frame)
             print(f"Image saved as {filename}")
+            self.mainui.ocrOutputBox.setPlainText("Image captured!")
+
+            # ✅ Freeze preview
+            self.timer.stop()
+            self.frozen = True
         else:
             print("No frame available to capture.")
-        self.mainui.ocrOutputBox.setPlainText("Image captured!")
+
 
     def binarize_image(self):
         image = Image.open("test_image.png")
-        binarized_image = binarization.nlbin(image, low=5, high=20)
+        binarized_image = binarization.nlbin(image, low=5, high=25)
         binarized_image.save("test_binarized.png")
         self.mainui.ocrOutputBox.setPlainText("Image binarized!")
 
     def transliterate_image(self):
+        import os
+        os.environ["PYTHONUTF8"] = "1"  # force utf-8 mode for subprocess
+
         command = [
             "kraken", "-i", "test_binarized.png", "test.txt", "ocr",
-            "-m", "baybayin_model_latin_text_v1.mlmodel_99.mlmodel", "--no-segmentation"
+            "-m", "baybayin_custom_dataset.mlmodel_best.mlmodel", "--no-segmentation"
         ]
 
-        try:
-            result = subprocess.run(command, capture_output=True, text=True, check=True)
-            output_text = result.stdout + "\n" + result.stderr
-        except subprocess.CalledProcessError as e:
-            output_text = "Error during OCR:\n" + e.stdout + "\n" + e.stderr
+        log_file = "transliteration_log.txt"
 
-        # Display output in the text box
-        print(output_text)
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=True,
+                encoding="utf-8",   # decode output as UTF-8
+                errors="replace"    # replace bad chars instead of crashing
+            )
+
+            # Write all logs to file
+            with open(log_file, "w", encoding="utf-8") as f:
+                f.write("STDOUT:\n" + (result.stdout or "") + "\n")
+                f.write("STDERR:\n" + (result.stderr or "") + "\n")
+
+            self.mainui.ocrOutputBox.setPlainText("Transliteration finished. Logs saved to transliteration_log.txt.")
+
+        except subprocess.CalledProcessError as e:
+            # Write error logs to file as well
+            with open(log_file, "w", encoding="utf-8") as f:
+                f.write("STDOUT:\n" + (e.stdout or "") + "\n")
+                f.write("STDERR:\n" + (e.stderr or "") + "\n")
+
+            self.mainui.ocrOutputBox.setPlainText("Error during OCR. See transliteration_log.txt for details.")
+
+    def reset_camera(self):
+        """Resume live camera feed after capture."""
+        if self.frozen:
+            self.timer.start(30)
+            self.frozen = False
+            self.mainui.ocrOutputBox.setPlainText("Camera reset. Live preview resumed.")
+    
+    def show_output_text(self):
+        """Load OCR result from test.txt into outputText box."""
+        try:
+            with open("test.txt", "r", encoding="utf-8") as f:
+                text = f.read()
+                self.mainui.outputText.setPlainText(text)
+        except FileNotFoundError:
+            self.mainui.outputText.setPlainText("Error: test.txt not found.")
+        except Exception as e:
+            self.mainui.outputText.setPlainText(f"Error reading test.txt:\n{str(e)}")
 
     def closeEvent(self):
         self.cap.release()
