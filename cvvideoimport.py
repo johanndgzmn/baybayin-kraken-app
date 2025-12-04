@@ -1,19 +1,26 @@
-from PyQt6.uic import loadUi
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtCore import QTimer
-
+from PyQt5.uic import loadUi
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtCore import QTimer
+from picamera2 import Picamera2
 import cv2
 import time
 import subprocess
 from PIL import Image
 from kraken import binarization
+import os
+
+os.environ["G_MESSAGES_DEBUG"] = "none"
+os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = "/usr/lib/arm-linux-gnueabihf/qt5/plugins/platforms"
 
 class Camera:
     def __init__(self):
         self.mainui = loadUi('baybayin-kraken-app.ui')
         self.mainui.show()
         
+        self.picam2 = Picamera2()
+        self.picam2.configure(self.picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)}))
+        self.picam2.start()
         self.mainui.startStopCameraButton.clicked.connect(self.closeEvent)# exit button
         self.mainui.captureImageButton.clicked.connect(self.capture_image) #capture frame button
         self.mainui.transliterateImageButton.clicked.connect(self.transliterate_image) # transliterate button
@@ -22,12 +29,6 @@ class Camera:
         self.mainui.resetCameraButton.clicked.connect(self.reset_camera) # reset button
         self.mainui.showOutputTextButton.clicked.connect(self.show_output_text) # show output button
 
-        self.cap = cv2.VideoCapture(0)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        if not self.cap.isOpened():
-            print("Error: Cannot access the webcam.")
-            return
 
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades +
                                                 "haarcascade_frontalface_default.xml")
@@ -46,22 +47,18 @@ class Camera:
 
 
     def update_frame(self):
-        ret, frame = self.cap.read()
-        if ret:
-            self.current_frame = frame.copy()
-            
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1,
-                                                       minNeighbors=5, minSize=(50, 50))
-            for (x, y, w, h) in faces:
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            h, w, ch = frame.shape
-            bytes_per_line = ch * w
-            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-            self.video_label.setPixmap(QPixmap.fromImage(q_img))
-            self.video_label.repaint()
+        frame = self.picam2.capture_array()
+        self.current_frame = frame.copy()
+
+        # Convert to QImage
+        rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb_image.shape
+        bytes_per_line = ch * w
+        qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
+
+        # Display in QLabel
+        self.video_label.setPixmap(QPixmap.fromImage(qt_image))
+
 
     def capture_image(self):
         if self.current_frame is not None:
@@ -88,8 +85,8 @@ class Camera:
         os.environ["PYTHONUTF8"] = "1"  # force utf-8 mode for subprocess
 
         command = [
-            "kraken", "-i", "test_binarized.png", "test.txt", "ocr",
-            "-m", "baybayin_custom_dataset.mlmodel_best.mlmodel", "--no-segmentation"
+            "kraken", "-i", "test_binarized.png", "test.txt", "segment", "ocr",
+            "-m", "baybayin_custom_dataset_edited.mlmodel_best.mlmodel"
         ]
 
         log_file = "transliteration_log.txt"
@@ -138,8 +135,7 @@ class Camera:
             self.mainui.outputText.setPlainText(f"Error reading test.txt:\n{str(e)}")
 
     def closeEvent(self):
-        self.cap.release()
-        self.mainui.close()
+        self.picam2.stop()
 
 if __name__ == '__main__':
     app = QApplication([])
