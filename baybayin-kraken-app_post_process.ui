@@ -109,7 +109,7 @@
    <property name="geometry">
     <rect>
      <x>490</x>
-     <y>200</y>
+     <y>210</y>
      <width>241</width>
      <height>131</height>
     </rect>
@@ -126,7 +126,7 @@
      <x>490</x>
      <y>160</y>
      <width>239</width>
-     <height>31</height>
+     <height>41</height>
     </rect>
    </property>
   </widget>
@@ -159,14 +159,27 @@
   <widget class="QPushButton" name="showOutputTextButton">
    <property name="geometry">
     <rect>
-     <x>520</x>
-     <y>330</y>
-     <width>181</width>
+     <x>490</x>
+     <y>350</y>
+     <width>111</width>
      <height>31</height>
     </rect>
    </property>
    <property name="text">
     <string>Show Output Text</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="postProcessButton">
+   <property name="geometry">
+    <rect>
+     <x>620</x>
+     <y>350</y>
+     <width>111</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Post-Process Text</string>
    </property>
   </widget>
  </widget>

@@ -1,11 +1,12 @@
 STDOUT:
 Loading ANN baybayin_custom_dataset.mlmodel_best.mlmodel	✓
-[09/09/25 20:05:56] WARNING  Recognizers with segmentation types   rpred.py:113
+Segmenting test_binarized.png	✓
+[12/05/25 22:22:39] WARNING  Recognizers with segmentation types   rpred.py:103
                              {'baselines'} will be applied to                  
                              segmentation of type bbox. This will              
                              likely result in severely degraded                
                              performace                                        
-Processing ---------------------------------------- 100% 1/1 0:00:00 0:00:00
+Processing ---------------------------------------- 100% 8/8 0:00:00 0:00:04
 Writing recognition results for test_binarized.png	✓
 
 STDERR:
