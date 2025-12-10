@@ -11,10 +11,17 @@ from kraken import binarization
 import os
 import torch
 from transformers import T5ForConditionalGeneration, T5Tokenizer
+import atexit
+import board
+import neopixel
 
 os.environ["G_MESSAGES_DEBUG"] = "none"
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = "/usr/lib/arm-linux-gnueabihf/qt5/plugins/platforms"
+pixels = neopixel.NeoPixel(board.D18, 55, brightness=1)
+def cleanup_led():
+    pixels.fill((0, 0, 0))
 
+atexit.register(cleanup_led)
 
 # ==========================================================
 #                 T5 POST-PROCESSING LOAD
@@ -52,9 +59,9 @@ def t5_correct(line: str) -> str:
 # ==========================================================
 class Camera:
     def __init__(self):
-        self.mainui = loadUi('baybayin-kraken-app_postprocess_rpi.ui')
+        self.mainui = loadUi('baybayin-kraken-app_post_process.ui')
         self.mainui.show()
-        
+        pixels.fill((255, 255, 255))
         # Camera
         self.picam2 = Picamera2()
         self.picam2.configure(
@@ -191,7 +198,19 @@ class Camera:
 
     # ------------------------------------------------------
     def closeEvent(self):
-        self.picam2.stop()
+        try:
+            self.picam2.stop()
+        except:
+            pass
+        
+        try:
+            pixels.fill((0, 0, 0))
+        except:
+            pass
+        
+        subprocess.run(["sudo", "shutdown", "-h", "now"])
+        if event:
+            event.accept()
 
 
 if __name__ == '__main__':

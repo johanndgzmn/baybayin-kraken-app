@@ -9,14 +9,24 @@ import subprocess
 from PIL import Image
 from kraken import binarization
 import os
+import atexit
+import board
+import neopixel
 
 os.environ["G_MESSAGES_DEBUG"] = "none"
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = "/usr/lib/arm-linux-gnueabihf/qt5/plugins/platforms"
+
+pixels = neopixel.NeoPixel(board.D18, 55, brightness=1)
+def cleanup_led():
+    pixels.fill((0, 0, 0))
+
+atexit.register(cleanup_led)
 
 class Camera:
     def __init__(self):
         self.mainui = loadUi('baybayin-kraken-app.ui')
         self.mainui.show()
+        pixels.fill((255, 255, 255))
         
         self.picam2 = Picamera2()
         self.picam2.configure(self.picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)}))
@@ -135,7 +145,19 @@ class Camera:
             self.mainui.outputText.setPlainText(f"Error reading test.txt:\n{str(e)}")
 
     def closeEvent(self):
-        self.picam2.stop()
+        try:
+            self.picam2.stop()
+        except:
+            pass
+        
+        try:
+            pixels.fill((0, 0, 0))
+        except:
+            pass
+        
+        subprocess.run(["sudo", "shutdown", "-h", "now"])
+        if event:
+            event.accept()
 
 if __name__ == '__main__':
     app = QApplication([])
